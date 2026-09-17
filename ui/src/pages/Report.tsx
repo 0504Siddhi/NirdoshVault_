@@ -81,7 +81,7 @@ export default function Report() {
         <div className="flex items-center gap-2 shrink-0">
           <ExportPDF analysis={analysis} />
           {hasIssues && (
-            <Link to={`/guidance/${analysis._id}`} className="btn btn-primary">
+            <Link to={`/guidance/${analysis._id}`} className="btn btn-primary" aria-label="View Correction Kit">
               <BookOpen size={16} /> Correction Kit
             </Link>
           )}
@@ -92,9 +92,14 @@ export default function Report() {
 
       <IdentityTrustGraph graph={analysis.identityTrustGraph} />
 
-      <div className={`card p-8 mb-8 border-2 ${hasIssues ? 'border-amber-500/30 bg-amber-50/50 dark:bg-saffron-500/5' : 'border-emerald-500/30 bg-emerald-50/50 dark:bg-green-500/5'}`}>
+      <div 
+        role="status" 
+        aria-live="polite" 
+        className={`card p-8 mb-8 border-2 ${hasIssues ? 'border-amber-500/30 bg-amber-50/50 dark:bg-saffron-500/5' : 'border-emerald-500/30 bg-emerald-50/50 dark:bg-green-500/5'}`}
+      >
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center text-3xl ${hasIssues ? 'bg-amber-100 text-amber-600 dark:bg-saffron-500/20 dark:text-saffron-500' : 'bg-emerald-100 text-emerald-600 dark:bg-green-500/20 dark:text-green-500'}`}>
+            <span className="sr-only">{hasIssues ? 'Needs review: ' : 'Agreement: '}</span>
             {hasIssues ? <AlertTriangle size={32} /> : <CheckCircle2 size={32} />}
           </div>
           <div className="flex-1 text-center sm:text-left">
@@ -213,13 +218,39 @@ function FieldRow({ result }: { result: any }) {
   const getStatusBadge = () => {
     switch(result.status) {
       case 'consistent':
-      case 'consensus_established': return <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20">✓ Consensus Established</span>;
+      case 'consensus_established': 
+        return (
+          <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20">
+            <span className="sr-only">Agreement: </span>✓ Consensus Established
+          </span>
+        );
       case 'outlier_detected':
       case 'possible_variant':
-      case 'outliers_found': return <span className="badge bg-amber-50 text-amber-700 border border-amber-200 dark:bg-saffron-500/10 dark:text-saffron-400 dark:border-saffron-500/20">⚠ Outlier Detected</span>;
+      case 'outliers_found': 
+        return (
+          <span className="badge bg-amber-50 text-amber-700 border border-amber-200 dark:bg-saffron-500/10 dark:text-saffron-400 dark:border-saffron-500/20">
+            <span className="sr-only">Needs review: </span>⚠ Outlier Detected
+          </span>
+        );
       case 'conflicting_evidence':
-      case 'no_consensus': return <span className="badge bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-500/10 dark:text-red-500 dark:border-red-500/20">Conflicting evidence · no strict majority</span>;
-      case 'incomplete_date_conflict': return <span className="badge bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20">📅 Incomplete Date Conflict</span>;
+      case 'no_consensus': 
+        return (
+          <span className="badge bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-500/10 dark:text-red-500 dark:border-red-500/20">
+            <span className="sr-only">Conflict: </span>Conflicting evidence · no strict majority
+          </span>
+        );
+      case 'incomplete_date_conflict': 
+        return (
+          <span className="badge bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20">
+            <span className="sr-only">Conflict: </span>📅 Incomplete Date Conflict
+          </span>
+        );
+      case 'extraction_invalid':
+        return (
+          <span className="badge bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30">
+            <span className="sr-only">Needs review: </span>⚠ Extraction Issue
+          </span>
+        );
       default: return null;
     }
   };
@@ -306,6 +337,38 @@ function FieldRow({ result }: { result: any }) {
             </div>
           </div>
         )}
+
+        {result.status === 'extraction_invalid' && (
+          <div className="p-4 rounded-xl border bg-amber-50/60 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-semibold mb-2">
+              <span aria-hidden="true">⚠️</span>
+              <span>Extraction issue — please re-upload a clearer photo</span>
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-400/90 mb-3">
+              The extracted identifier failed checksum or format validation (likely distorted or incomplete OCR).
+            </p>
+            {result.outliers && result.outliers.length > 0 && (
+              <div>
+                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Affected Document(s)</div>
+                <div className="flex flex-wrap gap-2">
+                  {result.outliers.map((o: any, i: number) => (
+                    <DocChip key={i} title={`${o.docTitle}: "${o.value}"`} type="warn" icon="⚠" />
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.supportingDocs && result.supportingDocs.length > 0 && (
+              <div className="mt-3">
+                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Valid Document(s)</div>
+                <div className="flex flex-wrap gap-2">
+                  {result.supportingDocs.map((d: any, i: number) => (
+                    <DocChip key={i} title={`${d.docTitle}: "${d.value}"`} type="good" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-50 dark:bg-slate-900/60 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
@@ -322,9 +385,11 @@ function DocChip({ title, type, icon = '✓' }: { title: string, type: 'good'|'w
     warn: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-saffron-500/10 dark:text-saffron-400 dark:border-saffron-500/20',
     danger: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
   };
+  const semanticLabel = type === 'good' ? 'Agreement: ' : type === 'warn' ? 'Needs review: ' : 'Conflict: ';
   return (
     <div className={`px-3 py-1.5 rounded-full text-xs font-medium border ${styles[type]} flex items-center gap-1.5`}>
-      <span>{icon}</span> {title}
+      <span className="sr-only">{semanticLabel}</span>
+      <span aria-hidden="true">{icon}</span> {title}
     </div>
   );
 }

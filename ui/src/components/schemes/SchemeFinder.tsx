@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SchemeFinder.tsx
  * ---------------------------------------------------------------------------
  * Scheme Discovery & Readiness module for Nirdosh Vault.
@@ -559,6 +559,11 @@ function evidenceBadge(doc: VaultDocument, tier: DocTier): { text: string; cls: 
 function DocPill({ rd }: { rd: ResolvedDoc }) {
   const badge = evidenceBadge(rd.doc, rd.tier);
   const dashed = rd.tier !== 'required';
+  const semanticLabel = badge.text.includes('No conflict') 
+    ? 'Agreement: ' 
+    : badge.text.includes('Conflict') 
+    ? 'Conflict: ' 
+    : 'Needs review: ';
   return (
     <div
       className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] ${dashed ? 'border-dashed' : ''} ${badge.cls}`}
@@ -569,7 +574,10 @@ function DocPill({ rd }: { rd: ResolvedDoc }) {
           <span className="ml-1 text-slate-400 dark:text-slate-500">({rd.appliesReason})</span>
         )}
       </span>
-      <span className={`font-mono font-semibold ${badge.cls}`}>{badge.text}</span>
+      <span className={`font-mono font-semibold ${badge.cls}`}>
+        <span className="sr-only">{semanticLabel}</span>
+        {badge.text}
+      </span>
     </div>
   );
 }
@@ -624,6 +632,7 @@ function SchemeCard({
         className={`absolute right-4 top-4 flex items-center gap-1 rounded border-2 border-dashed px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider ${tone.stamp}`}
         style={{ transform: 'rotate(-4deg)' }}
       >
+        <span className="sr-only">Eligibility screening result: </span>
         <span>{tone.dot}</span>
         {tone.label}
       </div>
@@ -752,6 +761,7 @@ function SchemeCard({
             href={scheme.source.url}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`Verify ${scheme.name} on Official Portal (opens in new tab)`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-saffron-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-saffron-600"
           >
             <span>↗</span>
@@ -971,7 +981,7 @@ export default function SchemeFinder({
       </div>
 
       {/* STEP 2: APPLICATION PREPARATION SUMMARY */}
-      <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
+      <div role="status" aria-live="polite" className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
         <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
           <span>📋</span>Your application preparation
         </div>

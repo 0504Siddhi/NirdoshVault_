@@ -4,7 +4,7 @@
  * doesn't care which backend is active.
  */
 import { v4 as uuidv4 } from 'uuid';
-import type { ConsensusSummary, DocumentSpecificField } from '../types/nirdosh-vault';
+import type { ConsensusSummary, DocumentSpecificField, FieldStatus } from '../types/nirdosh-vault';
 import type { IdentityResolutionConfidenceResult } from '../scoring/scoringTypes';
 import type { IdentityTrustGraphData } from '../services/identityTrustGraphService';
 
@@ -72,7 +72,7 @@ export interface IAnalysis {
 export interface IFieldResult {
   fieldKey: string;
   label: string;
-  status: 'consistent' | 'possible_variant' | 'mismatch' | 'outlier_detected' | 'conflicting_evidence' | 'not_comparable' | 'missing' | 'extraction_uncertain';
+  status: FieldStatus;
   confidence: 'high' | 'medium' | 'review' | 'no_consensus';
   confidenceLabel: string;
   consensusValue?: string;

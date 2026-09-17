@@ -166,8 +166,8 @@ export default function NearbyCentres() {
     <div className="pt-24 px-6 max-w-4xl mx-auto min-h-screen relative z-10 pb-20">
       <div className="mb-8">
         {activeAnalysisId && (
-          <Link to={`/guidance/${activeAnalysisId}`} className="text-saffron-500 text-sm font-medium hover:underline mb-4 inline-block">
-            ? Back to Correction Kit
+          <Link to={`/guidance/${activeAnalysisId}`} aria-label="Back to Correction Kit" className="text-saffron-500 text-sm font-medium hover:underline mb-4 inline-block">
+            ← Back to Correction Kit
           </Link>
         )}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 border border-green-500/20 mb-3 block">
@@ -219,17 +219,18 @@ export default function NearbyCentres() {
               value={pinInput}
               onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="e.g. 411004"
+              aria-label="Enter 6-digit postal PIN code"
               className="input text-sm flex-1"
               maxLength={6}
             />
-            <button onClick={searchByPin} className="btn btn-primary px-3 py-2 text-xs shrink-0">Go</button>
+            <button onClick={searchByPin} aria-label="Search centres by PIN code" className="btn btn-primary px-3 py-2 text-xs shrink-0">Go</button>
           </div>
         </div>
       </div>
 
       {geoError && (
-        <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm mb-6">
-          ?? {geoError}. Showing default region centres.
+        <div role="alert" aria-live="assertive" className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm mb-6">
+          ⚠️ {geoError}. Showing default region centres.
         </div>
       )}
 
@@ -288,7 +289,7 @@ export default function NearbyCentres() {
 
       {!loading && centres.length > 0 && (
         <div>
-          <div className="text-sm text-slate-500 mb-4 flex items-center justify-between">
+          <div role="status" aria-live="polite" className="text-sm text-slate-500 mb-4 flex items-center justify-between">
             <span>
               Found <strong className="text-navy-950 dark:text-white">{centres.length}</strong> centre{centres.length !== 1 ? 's' : ''}
               {searchMethod === 'geolocation' && ' near your location'}
@@ -348,6 +349,7 @@ export default function NearbyCentres() {
                         <a href={centre.mapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          aria-label={`Open directions to ${centre.name} in Google Maps (opens in new tab)`}
                           onClick={(e) => e.stopPropagation()}
                           className="btn btn-primary px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
                         >

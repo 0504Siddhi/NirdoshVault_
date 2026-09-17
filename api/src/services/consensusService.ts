@@ -6,6 +6,8 @@ import {
 import {
   canonicalFieldKey,
   normalizeField,
+  validateAadhaarVerhoeff,
+  validatePanFormat,
 } from './normalizationService';
 
 import type {
@@ -165,6 +167,7 @@ export function runConsensusEngine(
   documents: IDocument[]
 ): AuditReportResponse {
   const byField = new Map<string, Entry[]>();
+  const extractionInvalidResults: IFieldResult[] = [];
 
   /*
    * Prevent one document from voting more than once for the same field.
@@ -185,10 +188,54 @@ export function runConsensusEngine(
         continue;
       }
 
+      // Check Aadhaar/PAN checksum & format BEFORE comparison logic
+      const isAadhaarKey = key === 'aadhaar_number';
+      const isPanKey = key === 'pan_number';
+
+      if (isAadhaarKey || isPanKey) {
+        const isInvalid = isAadhaarKey
+          ? !validateAadhaarVerhoeff(field.value)
+          : !validatePanFormat(field.value);
+
+        if (isInvalid) {
+          const invalidResult: IFieldResult = {
+            fieldKey: key,
+            label: field.label || (isAadhaarKey ? 'Aadhaar Number' : 'PAN Number'),
+            status: 'extraction_invalid',
+            confidence: 'review',
+            confidenceLabel: 'Extraction Issue - Checksum / Format Failed',
+            scenario: isAadhaarKey ? 'aadhaar_verhoeff_failed' : 'pan_format_failed',
+            consensusValue: undefined,
+            supportingDocs: [],
+            outliers: [
+              {
+                docId: doc._id,
+                docTitle: doc.title,
+                value: field.value,
+                docType: doc.docType,
+              },
+            ],
+            explanation: isAadhaarKey
+              ? 'Aadhaar number failed Verhoeff checksum validation. Likely OCR extraction issue — please re-upload a clearer photo.'
+              : 'PAN number failed standard format validation. Likely OCR extraction issue — please re-upload a clearer photo.',
+            needsManualVerification: true,
+            documentsContainingField: 1,
+            supportingDocumentTypes: [],
+            contributingDocumentTypes: [doc.docType],
+            averageExtractionConfidence:
+              typeof field.confidence === 'number' && Number.isFinite(field.confidence)
+                ? Math.max(0, Math.min(1, field.confidence))
+                : null,
+          };
+          extractionInvalidResults.push(invalidResult);
+          continue;
+        }
+      }
+
       /*
-       * Do not include Aadhaar/PAN identifiers in the consensus profile.
+       * Do not include other non-comparable sensitive identifiers in the consensus profile.
        */
-      if (isSensitiveIdentifierField(key)) {
+      if (isSensitiveIdentifierField(key) && !isAadhaarKey && !isPanKey) {
         continue;
       }
 
@@ -247,8 +294,48 @@ export function runConsensusEngine(
   const allComparableFieldResults: IFieldResult[] = [];
   const documentSpecificFields: DocumentSpecificField[] = [];
 
+  // Group extraction-invalid results by fieldKey and pair with any valid supporting documents
+  const groupedInvalid = new Map<string, IFieldResult>();
+  for (const inv of extractionInvalidResults) {
+    const existing = groupedInvalid.get(inv.fieldKey);
+    if (!existing) {
+      const validEntries = byField.get(inv.fieldKey) || [];
+      const supportingDocs = validEntries.map((e) => ({
+        docId: e.docId,
+        docTitle: e.docTitle,
+        value: e.value,
+        docType: e.docType,
+      }));
+      const supportingTypes = Array.from(new Set(validEntries.map((e) => e.docType)));
+      const contributingTypes = Array.from(
+        new Set([...supportingTypes, ...(inv.contributingDocumentTypes || [])])
+      );
+      groupedInvalid.set(inv.fieldKey, {
+        ...inv,
+        supportingDocs,
+        supportingDocumentTypes: supportingTypes,
+        contributingDocumentTypes: contributingTypes,
+        documentsContainingField: supportingDocs.length + (inv.outliers?.length || 0),
+      });
+    } else {
+      if (inv.outliers) {
+        existing.outliers = [...(existing.outliers || []), ...inv.outliers];
+      }
+      existing.documentsContainingField =
+        (existing.supportingDocs?.length || 0) + (existing.outliers?.length || 0);
+      existing.contributingDocumentTypes = Array.from(
+        new Set([...(existing.contributingDocumentTypes || []), ...(inv.contributingDocumentTypes || [])])
+      );
+    }
+  }
+
   // 2. Readiness router and consensus matrix
   for (const [fieldKey, entries] of byField) {
+    // If this field had an extraction error in one or more documents, it is handled as extraction_invalid
+    if (groupedInvalid.has(fieldKey)) {
+      continue;
+    }
+
     const label = fieldKey
       .replace(/_/g, ' ')
       .replace(
@@ -536,19 +623,30 @@ export function runConsensusEngine(
   }
 
   // 3. Summary generation
+  const finalInvalidResults = Array.from(groupedInvalid.values());
+  const allResults = [
+    ...comparableFieldResults,
+    ...finalInvalidResults,
+  ];
+
+  const allComparable = [
+    ...allComparableFieldResults,
+    ...finalInvalidResults,
+  ];
+
   const totalComparable =
-    comparableFieldResults.length;
+    allResults.length;
 
   const totalConsensus =
-    comparableFieldResults.filter(
+    allResults.filter(
       (field) =>
         field.status === 'consistent'
     ).length;
 
   const totalConflicts =
-    comparableFieldResults.filter(
+    allResults.filter(
       (field) =>
-        field.status !== 'consistent'
+        field.status !== 'consistent' && field.status !== 'extraction_invalid'
     ).length;
 
   return {
@@ -563,10 +661,10 @@ export function runConsensusEngine(
     },
 
     fieldResults:
-      comparableFieldResults,
+      allResults,
 
     documentSpecificFields,
 
-    allComparableFieldResults,
+    allComparableFieldResults: allComparable,
   };
 }

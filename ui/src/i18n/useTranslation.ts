@@ -1,7 +1,7 @@
-﻿import { useLanguage } from "../store/language";
+import { useLanguage } from "../store/language";
 import { translations } from "./translations";
 
-type TranslationKey = keyof typeof translations["en"];
+export type TranslationKey = keyof typeof translations["en"];
 
 export function useTranslation() {
   const lang = useLanguage((s) => s.lang);

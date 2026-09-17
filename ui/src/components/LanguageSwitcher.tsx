@@ -25,6 +25,7 @@ export function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button
+        id="language-switcher-btn"
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Choose language"
@@ -38,12 +39,13 @@ export function LanguageSwitcher() {
           🌐
         </span>
 
-        <span>{current?.label ?? "English"}</span>
+        <span>{current?.native ? (current.code === 'en' ? current.label : `${current.native}`) : "English"}</span>
       </button>
 
       {open && (
         <div
-          className="absolute top-10 right-0 min-w-[140px]
+          id="language-dropdown-menu"
+          className="absolute top-10 right-0 min-w-[150px]
                      bg-white dark:bg-[#1a1a1a]
                      border border-slate-200 dark:border-white/15
                      rounded-lg overflow-hidden shadow-xl z-[9999]"
@@ -51,18 +53,22 @@ export function LanguageSwitcher() {
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
+              id={`lang-option-${l.code}`}
               type="button"
               onClick={() => {
                 setLang(l.code);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${
+              className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors flex items-center justify-between ${
                 l.code === lang
-                  ? "text-green-500 bg-green-500/10"
+                  ? "text-green-500 bg-green-500/10 font-medium"
                   : "text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10"
               }`}
             >
-              {l.label}
+              <span>{l.native}</span>
+              {l.native !== l.label && (
+                <span className="text-xs text-slate-400 ml-2">({l.label})</span>
+              )}
             </button>
           ))}
         </div>

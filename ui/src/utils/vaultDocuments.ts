@@ -1,4 +1,4 @@
-﻿import api from '../api/client';
+import api from '../api/client';
 import type { VaultDocument, EvidenceStatus } from '../components/schemes/SchemeFinder';
 import type { IFieldResult } from '../types/nirdosh-vault';
 
@@ -76,6 +76,8 @@ export async function fetchVaultDocuments(): Promise<VaultDocument[]> {
 
     let hasAttributableConflict = false;
     const conflictingFieldLabels: string[] = [];
+    let hasExtractionIssue = false;
+    const extractionIssueFieldLabels: string[] = [];
 
     let participatedComparableCount = 0;
     let consistentParticipatedCount = 0;
@@ -123,6 +125,13 @@ export async function fetchVaultDocuments(): Promise<VaultDocument[]> {
             conflictingFieldLabels.push(field.label);
           }
         }
+      } else if (field.status === 'extraction_invalid') {
+        if (isOutlierDoc) {
+          hasExtractionIssue = true;
+          if (field.label && !extractionIssueFieldLabels.includes(field.label)) {
+            extractionIssueFieldLabels.push(field.label);
+          }
+        }
       }
     }
 
@@ -138,6 +147,9 @@ export async function fetchVaultDocuments(): Promise<VaultDocument[]> {
       } else {
         note = 'Identity field needs review';
       }
+    } else if (hasExtractionIssue) {
+      evidence = 'insufficient_evidence';
+      note = `${extractionIssueFieldLabels[0] || 'Identity'} field has an extraction issue — re-upload recommended`;
     } else if (
       participatedComparableCount > 0 &&
       participatedComparableCount === consistentParticipatedCount

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import api from '../api/client';
 import { useAuthStore } from '../store/auth';
+import { useTranslation, type TranslationKey } from '../i18n/useTranslation';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 type PasswordStrength = {
   score: number;
@@ -19,7 +21,10 @@ type ApiErrorResponse = {
   message?: string;
 };
 
-function getPasswordStrength(password: string): PasswordStrength {
+function getPasswordStrength(
+  password: string,
+  t: (key: TranslationKey) => string
+): PasswordStrength {
   let score = 0;
 
   if (password.length >= 8) score += 1;
@@ -27,7 +32,13 @@ function getPasswordStrength(password: string): PasswordStrength {
   if (/[0-9]/.test(password)) score += 1;
   if (/[^A-Za-z0-9]/.test(password)) score += 1;
 
-  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const labels = [
+    '',
+    t('auth_strength_weak'),
+    t('auth_strength_fair'),
+    t('auth_strength_good'),
+    t('auth_strength_strong'),
+  ];
   const colors = ['', '#ef4444', '#f97316', '#f59e0b', '#10b981'];
 
   return {
@@ -37,7 +48,7 @@ function getPasswordStrength(password: string): PasswordStrength {
   };
 }
 
-function formatAuthError(error: unknown): string {
+function formatAuthError(error: unknown, fallbackMessage: string): string {
   if (
     typeof error === 'object' &&
     error !== null &&
@@ -71,10 +82,11 @@ function formatAuthError(error: unknown): string {
     }
   }
 
-  return 'Authentication failed. Please check your details and try again.';
+  return fallbackMessage;
 }
 
 export default function Auth() {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -106,27 +118,25 @@ export default function Auth() {
     setError('');
 
     if (!normalizedEmail) {
-      setError('Please enter your email address.');
+      setError(t('auth_err_email_required'));
       return;
     }
 
     if (!password) {
-      setError('Please enter your password.');
+      setError(t('auth_err_password_required'));
       return;
     }
 
     if (!isLogin && !normalizedName) {
-      setError('Please enter your full name.');
+      setError(t('auth_err_name_required'));
       return;
     }
 
     if (!isLogin) {
-      const passwordStrength = getPasswordStrength(password);
+      const passwordStrength = getPasswordStrength(password, t);
 
       if (passwordStrength.score < 3) {
-        setError(
-          'Use at least 8 characters with an uppercase letter and a number.',
-        );
+        setError(t('auth_err_password_requirements'));
         return;
       }
     }
@@ -150,37 +160,41 @@ export default function Auth() {
       const { data } = await api.post(endpoint, payload);
 
       if (!data?.user || !data?.token) {
-        throw new Error('Invalid authentication response');
+        throw new Error(t('auth_err_invalid_response'));
       }
 
       setAuth(data.user, data.token);
       navigate('/dashboard', { replace: true });
     } catch (authError: unknown) {
-      setError(formatAuthError(authError));
+      setError(formatAuthError(authError, t('auth_err_default')));
     } finally {
       setLoading(false);
     }
   };
 
-  const passwordStrength = getPasswordStrength(password);
+  const passwordStrength = getPasswordStrength(password, t);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 pt-24 relative z-10">
       <div className="w-full max-w-md">
         <div className="card p-8 sm:p-10">
-          <div className="flex items-center gap-3 justify-center mb-8">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-saffron-500 to-green-600 flex items-center justify-center text-sm font-black text-white tracking-tight shadow-lg shadow-saffron-500/20">
-              NV
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-saffron-500 to-green-600 flex items-center justify-center text-sm font-black text-white tracking-tight shadow-lg shadow-saffron-500/20">
+                NV
+              </div>
+
+              <div>
+                <div className="font-extrabold text-lg leading-tight">
+                  Nirdosh Vault
+                </div>
+                <div className="text-xs text-slate-500">
+                  {t('auth_subtitle')}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="font-extrabold text-lg leading-tight">
-                Nirdosh Vault
-              </div>
-              <div className="text-xs text-slate-500">
-                Consensus Identity Engine
-              </div>
-            </div>
+            <LanguageSwitcher />
           </div>
 
           <div className="flex bg-white rounded-lg p-1 mb-8">
@@ -193,7 +207,7 @@ export default function Auth() {
               onClick={() => switchMode(true)}
               disabled={loading}
             >
-              Sign In
+              {t('auth_sign_in')}
             </button>
 
             <button
@@ -205,19 +219,19 @@ export default function Auth() {
               onClick={() => switchMode(false)}
               disabled={loading}
             >
-              Create Account
+              {t('auth_create_account')}
             </button>
           </div>
 
           <div className="mb-6 text-center">
             <h1 className="text-xl font-bold text-navy-950">
-              {isLogin ? 'Welcome back' : 'Create your account'}
+              {isLogin ? t('auth_welcome_back') : t('auth_create_title')}
             </h1>
 
             <p className="text-sm text-slate-500 mt-1">
               {isLogin
-                ? 'Sign in to continue verifying your documents.'
-                : 'Register securely to begin document verification.'}
+                ? t('auth_sign_in_desc')
+                : t('auth_register_desc')}
             </p>
           </div>
 
@@ -238,14 +252,14 @@ export default function Auth() {
                   htmlFor="full-name"
                   className="block text-xs font-medium text-slate-500 mb-1.5"
                 >
-                  Full Name
+                  {t('auth_full_name_label')}
                 </label>
 
                 <input
                   id="full-name"
                   type="text"
                   className="input"
-                  placeholder="Enter your full name"
+                  placeholder={t('auth_full_name_placeholder')}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   autoComplete="name"
@@ -262,14 +276,14 @@ export default function Auth() {
                 htmlFor="email"
                 className="block text-xs font-medium text-slate-500 mb-1.5"
               >
-                Email Address
+                {t('auth_email_label')}
               </label>
 
               <input
                 id="email"
                 type="email"
                 className="input"
-                placeholder="your@email.com"
+                placeholder={t('auth_email_placeholder')}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
@@ -283,7 +297,7 @@ export default function Auth() {
                 htmlFor="password"
                 className="block text-xs font-medium text-slate-500 mb-1.5"
               >
-                Password
+                {t('auth_password_label')}
               </label>
 
               <input
@@ -292,8 +306,8 @@ export default function Auth() {
                 className="input"
                 placeholder={
                   isLogin
-                    ? 'Enter your password'
-                    : 'Min. 8 characters, uppercase and number'
+                    ? t('auth_password_placeholder_login')
+                    : t('auth_password_placeholder_signup')
                 }
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -331,7 +345,7 @@ export default function Auth() {
                     </span>
 
                     <span className="text-[11px] text-slate-500">
-                      8+ characters, uppercase and number
+                      {t('auth_password_hint')}
                     </span>
                   </div>
                 </div>
@@ -345,11 +359,11 @@ export default function Auth() {
             >
               {loading
                 ? isLogin
-                  ? 'Signing in...'
-                  : 'Creating account...'
+                  ? t('auth_signing_in')
+                  : t('auth_creating_account')
                 : isLogin
-                  ? 'Sign In →'
-                  : 'Create Account →'}
+                  ? t('auth_submit_login')
+                  : t('auth_submit_signup')}
             </button>
           </form>
 
@@ -360,7 +374,7 @@ export default function Auth() {
 
             <div className="relative flex justify-center">
               <span className="bg-white px-3 text-xs text-slate-500">
-                Privacy-first document verification
+                {t('auth_privacy_badge')}
               </span>
             </div>
           </div>
@@ -373,9 +387,7 @@ export default function Auth() {
             />
 
             <span>
-              For testing and demonstrations, upload only synthetic or
-              sample documents. Do not upload real Aadhaar, PAN, or other
-              sensitive identity documents.
+              {t('auth_demo_hint')}
             </span>
           </div>
         </div>

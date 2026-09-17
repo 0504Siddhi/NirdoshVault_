@@ -14,6 +14,10 @@
     --grid-line: rgba(0,0,0,0.04);
   }
 
+  html.font-sm { font-size: 14px; }
+  html.font-md { font-size: 16px; }
+  html.font-lg { font-size: 18px; }
+
   /* ─── Dark mode variables ──────────────────────────────────── */
   .dark {
     --glass: rgba(255, 255, 255, 0.05);
@@ -106,9 +110,42 @@
 @layer base {
   html { font-size: 100%; }
   body { line-height: 1.5; }
-  :focus-visible { outline: 3px solid #e4a142; outline-offset: 3px; }
+  
+  /* Visible focus outlines for keyboard navigation across all interactive elements */
+  :focus-visible {
+    outline: 3px solid #e4a142 !important;
+    outline-offset: 2px !important;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid #e4a142 !important;
+    outline-offset: 2px !important;
+  }
+
   .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 100; background: #0f172a; color: #fff; padding: .75rem 1rem; border-radius: .5rem; }
   .skip-link:focus { top: 1rem; }
   @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
 }
+
+@layer utilities {
+  /* Screen reader only utility class */
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border-width: 0 !important;
+  }
+}
+
 @layer components { .btn { min-height:44px; min-width:44px; } }

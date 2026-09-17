@@ -16,6 +16,8 @@ import {
 import {
   normalizeField,
   canonicalFieldKey,
+  validateAadhaarVerhoeff,
+  validatePanFormat,
 } from '../services/normalizationService';
 import { AuditService } from '../services/auditService';
 import logger, { logExtractionMetrics } from '../services/logger';
@@ -440,16 +442,22 @@ router.post(
             field.value
           );
 
+          let invalidReason: string | null = null;
+          if (field.confidence < 0.6 || !normalizedResult.normalized) {
+            invalidReason = 'low_confidence_or_invalid_value';
+          } else if (
+            (fieldKey === 'aadhaar_number' && !validateAadhaarVerhoeff(field.value)) ||
+            (fieldKey === 'pan_number' && !validatePanFormat(field.value))
+          ) {
+            invalidReason = 'failed_checksum_validation';
+          }
+
           return {
             ...field,
             fieldKey,
             normalized: normalizedResult.normalized,
             incomplete: normalizedResult.incomplete,
-            invalidReason:
-              field.confidence < 0.6 ||
-                !normalizedResult.normalized
-                ? 'low_confidence_or_invalid_value'
-                : null,
+            invalidReason,
           };
         });
 

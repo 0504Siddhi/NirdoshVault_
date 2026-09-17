@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,8 +11,13 @@ import {
   ExternalLink,
   ShieldCheck,
   Loader2,
+  Volume2,
+  Square,
+  Play,
+  Pause,
 } from 'lucide-react';
 import api from '../api/client';
+import { useLanguage } from '../store/language';
 
 type CorrectionKitResponse = {
   guide_status?: string;
@@ -68,6 +73,7 @@ const conflictStatuses = [
   'no_consensus',
   'incomplete_date_conflict',
   'extraction_uncertain',
+  'extraction_invalid',
 ];
 
 const normalizeFieldKey = (value: unknown): string =>
@@ -330,6 +336,92 @@ export default function Guidance() {
   const [guides, setGuides] = useState<Record<string, GuideState>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const currentLang = useLanguage((s) => s.lang);
+  const [speakingKey, setSpeakingKey] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleStopSpeech = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingKey(null);
+    setIsPaused(false);
+  };
+
+  const handleToggleSpeech = (key: string, text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+
+    if (speakingKey === key) {
+      if (synth.speaking) {
+        if (synth.paused) {
+          synth.resume();
+          setIsPaused(false);
+        } else {
+          synth.pause();
+          setIsPaused(true);
+        }
+      } else {
+        setSpeakingKey(null);
+        setIsPaused(false);
+      }
+      return;
+    }
+
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = synth.getVoices();
+    const langPrefix = currentLang.toLowerCase();
+
+    const matchingVoice =
+      voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(langPrefix)) ||
+      voices.find((v) => v.lang.toLowerCase().includes(langPrefix)) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith('en'));
+
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
+    }
+
+    const defaultLangMap: Record<string, string> = {
+      hi: 'hi-IN',
+      mr: 'mr-IN',
+      ta: 'ta-IN',
+      te: 'te-IN',
+      bn: 'bn-IN',
+      gu: 'gu-IN',
+      kn: 'kn-IN',
+      en: 'en-IN',
+    };
+    utterance.lang = matchingVoice?.lang || defaultLangMap[langPrefix] || 'en-IN';
+    utterance.rate = 0.95;
+
+    utterance.onend = () => {
+      setSpeakingKey(null);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setSpeakingKey(null);
+      setIsPaused(false);
+    };
+
+    setSpeakingKey(key);
+    setIsPaused(false);
+    synth.speak(utterance);
+  };
 
   const conflicts = useMemo(() => {
     if (!Array.isArray(analysis?.fieldResults)) return [];
@@ -510,25 +602,27 @@ export default function Guidance() {
       <div className="flex flex-wrap items-center gap-2 mb-6 text-sm">
         <Link
           to={`/report/${id}`}
+          aria-label="Back to Report"
           className="text-slate-500 hover:text-saffron-600 flex items-center gap-1 font-medium"
         >
           <ArrowLeft size={16} />
           Back to Report
         </Link>
 
-        <span className="text-slate-300">/</span>
+        <span className="text-slate-300" aria-hidden="true">/</span>
 
         <span className="text-saffron-600 font-bold uppercase tracking-wider text-xs bg-saffron-50 px-2.5 py-1 rounded-md border border-saffron-200">
           Correction Kit &amp; SOPs
         </span>
       </div>
 
-      <div className="mb-8">
+      <div role="status" aria-live="polite" className="mb-8">
         <h2 className="text-3xl font-bold mb-2">
           Official Correction Guidance Kit
         </h2>
 
         <p className="text-slate-500 text-sm">
+          <span className="sr-only">Status: </span>
           Detected conflicts: {conflicts.length}
         </p>
       </div>
@@ -579,6 +673,14 @@ export default function Guidance() {
               : [];
 
             const ragEnabled = Boolean(kit?.rag_metadata?.enabled);
+            const isSpeakingThis = speakingKey === key;
+            const textToRead = [
+              backendGuide?.title || `${label} Correction`,
+              `Governing authority: ${authority}.`,
+              backendGuide?.citizen_message,
+              steps.length > 0 ? `Steps: ${steps.map((s: string, i: number) => `Step ${i + 1}: ${s}`).join('. ')}` : '',
+              requiredDocuments.length > 0 ? `Required documents: ${requiredDocuments.join(', ')}.` : '',
+            ].filter(Boolean).join('. ');
 
             return (
               <div
@@ -589,7 +691,10 @@ export default function Guidance() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                        Conflict Resolution Required
+                        <span className="sr-only">Needs review / Conflict: </span>
+                        {conflict.status === 'extraction_invalid'
+                          ? 'Extraction Issue — Re-upload Required'
+                          : 'Conflict Resolution Required'}
                       </span>
 
                       {ragEnabled && (
@@ -624,6 +729,56 @@ export default function Guidance() {
                     <div className="text-xs font-bold text-saffron-600 mt-1 flex items-center gap-1 sm:justify-end">
                       <IndianRupee size={12} />
                       {fallback.fee}
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-1.5 sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSpeech(key, textToRead)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors shadow-xs ${
+                          isSpeakingThis
+                            ? 'bg-saffron-50 text-saffron-700 border-saffron-300 hover:bg-saffron-100'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        aria-label={
+                          isSpeakingThis
+                            ? isPaused
+                              ? 'Resume audio guidance'
+                              : 'Pause audio guidance'
+                            : 'Listen to audio guidance'
+                        }
+                      >
+                        {isSpeakingThis ? (
+                          isPaused ? (
+                            <>
+                              <Play size={13} className="text-saffron-600" />
+                              <span>Resume</span>
+                            </>
+                          ) : (
+                            <>
+                              <Pause size={13} className="text-saffron-600" />
+                              <span>Pause</span>
+                            </>
+                          )
+                        ) : (
+                          <>
+                            <Volume2 size={13} className="text-slate-500" />
+                            <span>🔊 Listen</span>
+                          </>
+                        )}
+                      </button>
+
+                      {isSpeakingThis && (
+                        <button
+                          type="button"
+                          onClick={handleStopSpeech}
+                          className="inline-flex items-center justify-center p-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          title="Stop audio readout"
+                          aria-label="Stop audio readout"
+                        >
+                          <Square size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -670,6 +825,7 @@ export default function Guidance() {
                             : 'bg-white text-navy-950 border-slate-200'
                             }`}
                         >
+                          <span className="sr-only">{item.type === 'outlier' ? 'Outlier / Discrepancy: ' : 'Supporting value: '}</span>
                           {item.value}
                         </span>
                       </div>
@@ -765,6 +921,7 @@ export default function Guidance() {
                               href={source.url}
                               target="_blank"
                               rel="noreferrer"
+                              aria-label={`Open official source: ${source.title || 'Official source'} (opens in a new tab)`}
                               className="inline-flex items-center gap-1 mt-2 font-semibold text-emerald-700 hover:text-emerald-900"
                             >
                               Open official source

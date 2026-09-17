@@ -3,23 +3,26 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { LogOut, Settings, Moon, Sun, Menu, X } from 'lucide-react';
 import { useDarkMode } from '../store/darkMode';
-import { T } from '../i18n/AutoTranslate';
+import { useFontSize } from '../store/fontSize';
+import { useTranslation } from '../i18n/useTranslation';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 export default function Navbar() {
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const { dark, toggle } = useDarkMode();
+  const { fontSize, setFontSize } = useFontSize();
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (['/', '/auth'].includes(location.pathname)) return null;
 
-  const links = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/upload', label: 'Upload Docs' },
-    { to: '/report', label: 'Report' },
-    { to: '/schemes', label: 'Schemes' },
-    { to: '/centres', label: 'Centres' },
+  const links: { to: string; key: 'nav_dashboard' | 'nav_upload_docs' | 'nav_report' | 'nav_schemes' | 'nav_centres'; label: string }[] = [
+    { to: '/dashboard', key: 'nav_dashboard', label: 'Dashboard' },
+    { to: '/upload', key: 'nav_upload_docs', label: 'Upload Docs' },
+    { to: '/report', key: 'nav_report', label: 'Report' },
+    { to: '/schemes', key: 'nav_schemes', label: 'Schemes' },
+    { to: '/centres', key: 'nav_centres', label: 'Centres' },
   ];
 
   return (
@@ -43,13 +46,60 @@ export default function Navbar() {
       <div className="hidden md:flex items-center gap-1">
         {links.map(l => (
           <NavLink key={l.to} to={l.to}>
-            <T>{l.label}</T>
+            {t(l.key)}
           </NavLink>
         ))}
       </div>
 
       {/* Right controls */}
       <div className="flex items-center gap-2">
+
+        {/* Font size controls */}
+        <div
+          role="group"
+          aria-label="Font size controls"
+          className="flex items-center rounded-lg border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/5 p-0.5"
+        >
+          <button
+            type="button"
+            onClick={() => setFontSize('sm')}
+            className={`px-1.5 py-0.5 text-xs font-semibold rounded transition-colors ${
+              fontSize === 'sm'
+                ? 'bg-saffron-500 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            aria-label="Decrease font size"
+            aria-pressed={fontSize === 'sm'}
+          >
+            A-
+          </button>
+          <button
+            type="button"
+            onClick={() => setFontSize('md')}
+            className={`px-1.5 py-0.5 text-xs font-semibold rounded transition-colors ${
+              fontSize === 'md'
+                ? 'bg-saffron-500 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            aria-label="Default font size"
+            aria-pressed={fontSize === 'md'}
+          >
+            A
+          </button>
+          <button
+            type="button"
+            onClick={() => setFontSize('lg')}
+            className={`px-1.5 py-0.5 text-xs font-semibold rounded transition-colors ${
+              fontSize === 'lg'
+                ? 'bg-saffron-500 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            aria-label="Increase font size"
+            aria-pressed={fontSize === 'lg'}
+          >
+            A+
+          </button>
+        </div>
 
         {/* Dark mode toggle */}
         <button
@@ -121,7 +171,7 @@ export default function Navbar() {
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
               }`}
             >
-              <T>{l.label}</T>
+              {t(l.key)}
             </Link>
           ))}
 
@@ -132,7 +182,7 @@ export default function Navbar() {
             className="px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 flex items-center gap-2"
           >
             <Settings size={14} />
-            <T>Settings</T>
+            {t('nav_settings')}
           </Link>
 
           {/* Mobile Sign Out */}
@@ -145,7 +195,7 @@ export default function Navbar() {
               className="px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-2 text-left"
             >
               <LogOut size={14} />
-              <T>Sign Out</T>
+              {t('auth_logout')}
             </button>
           )}
 

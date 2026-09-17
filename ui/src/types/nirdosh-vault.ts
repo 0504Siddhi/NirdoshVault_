@@ -5,7 +5,8 @@ export type DocumentType = typeof DOCUMENT_TYPES[number];
 
 export type FieldStatus =
   | 'consistent' | 'possible_variant' | 'mismatch' | 'outlier_detected'
-  | 'conflicting_evidence' | 'not_comparable' | 'missing' | 'extraction_uncertain';
+  | 'conflicting_evidence' | 'not_comparable' | 'missing' | 'extraction_uncertain'
+  | 'extraction_invalid';
 export type ConfidenceLabel = 'high' | 'medium' | 'review' | 'no_consensus';
 export type GuideStatus = 'guide_available' | 'authority_dependent' | 'requires_user_input' | 'no_consensus' | 'unsupported_rule';
 export type RuleStatus = 'verified' | 'derived' | 'authority-dependent' | 'unverified';
