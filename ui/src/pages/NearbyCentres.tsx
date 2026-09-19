@@ -166,13 +166,24 @@ export default function NearbyCentres() {
     <div className="pt-24 px-6 max-w-4xl mx-auto min-h-screen relative z-10 pb-20">
       <div className="mb-8">
         {activeAnalysisId && (
-          <Link to={`/guidance/${activeAnalysisId}`} aria-label="Back to Correction Kit" className="text-saffron-500 text-sm font-medium hover:underline mb-4 inline-block">
-            ← Back to Correction Kit
-          </Link>
+          <div className="flex items-center gap-3 mb-3">
+            <Link
+              to={`/guidance/${activeAnalysisId}`}
+              aria-label="Back to Correction Kit"
+              className="text-saffron-500 text-sm font-medium hover:underline shrink-0"
+            >
+              ← Back to Correction Kit
+            </Link>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 border border-green-500/20">
+              <MapPin size={12} /> Nearby Centres
+            </div>
+          </div>
         )}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 border border-green-500/20 mb-3 block">
-          <MapPin size={12} /> Nearby Centres
-        </div>
+        {!activeAnalysisId && (
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 border border-green-500/20 mb-3">
+            <MapPin size={12} /> Nearby Centres
+          </div>
+        )}
         <h2 className="text-3xl font-bold mb-2">Find Assistance Nearby</h2>
         <p className="text-slate-500">Locate the nearest Aadhaar Seva Kendra, PAN centre, SDM office, or Common Service Centre to get help with document corrections.</p>
       </div>
@@ -234,17 +245,21 @@ export default function NearbyCentres() {
         </div>
       )}
 
-      <LeafletMapView
-        centres={centres}
-        selectedCentreId={selectedCentreId}
-        onSelectCentre={(id) => setSelectedCentreId(id)}
-        userLocation={userLocation}
-        activeCity={selectedCity}
-        onLiveLocationUpdate={handleLiveLocationUpdate}
-      />
-      <div className="mt-6">
-        <NeedOfflineHelp />
+      {/* Map — explicit height ensures the map's position:relative actually
+          contains its internally absolute-positioned 'Track My Live Location'
+          button. Without a height the container collapses to 0px and the button
+          bleeds out onto whatever follows (NeedOfflineHelp). */}
+      <div className="rounded-xl overflow-hidden h-80 sm:h-96 mb-6">
+        <LeafletMapView
+          centres={centres}
+          selectedCentreId={selectedCentreId}
+          onSelectCentre={(id) => setSelectedCentreId(id)}
+          userLocation={userLocation}
+          activeCity={selectedCity}
+          onLiveLocationUpdate={handleLiveLocationUpdate}
+        />
       </div>
+      <NeedOfflineHelp />
 
       {loading && (
         <div className="flex items-center justify-center py-16 text-slate-400">

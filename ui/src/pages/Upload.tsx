@@ -183,10 +183,18 @@ export default function Upload() {
       </div>
 
       {/* Streamlined Info Banner */}
-      <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-3 mb-6 text-xs text-slate-700">
+      <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-3 mb-3 text-xs text-slate-700">
         <span className="text-blue-500 text-base shrink-0">ℹ️</span>
         <div>
           <strong className="text-navy-950">Active Templates:</strong> Optimized for Aadhaar, PAN, and certificates. Always use synthetic or redacted sample files.
+        </div>
+      </div>
+
+      {/* Photo quality tip */}
+      <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-3 mb-6 text-xs text-slate-700">
+        <span className="text-blue-500 text-base shrink-0">📷</span>
+        <div>
+          For best results, upload the <strong className="text-navy-950">original photo</strong> rather than one shared via WhatsApp or another chat app — those apps compress images and can reduce extraction accuracy.
         </div>
       </div>
 
@@ -231,7 +239,14 @@ export default function Upload() {
                 <div className="text-xs mt-1 font-medium">
                   {doc.status === 'processing' && <span className="text-saffron-400 flex items-center gap-1"><Loader2 size={12} className="animate-spin" />Processing…</span>}
                   {doc.status === 'ready' && <span className="text-green-400">✓ Ready</span>}
-                  {doc.status === 'failed' && <span className="text-red-400">✗ Failed — poor quality or unreadable</span>}
+                  {doc.status === 'failed' && (
+                    <span className="text-red-400">
+                      ✗{' '}
+                      {doc.quality?.warnings?.length
+                        ? doc.quality.warnings[0]
+                        : "Couldn't extract readable information — try a clearer photo or a different file"}
+                    </span>
+                  )}
                 </div>
                 {doc.docType && doc.docType !== 'unknown' && (
                   <div className="text-[10px] mt-1 text-slate-500 capitalize">{doc.docType.replace(/_/g, ' ')}</div>

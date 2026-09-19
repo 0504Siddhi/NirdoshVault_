@@ -406,34 +406,17 @@ router.post(
         }
 
         // Check the quality of the first preprocessed page.
+        // Quality issues are stored as metadata and warnings, but never
+        // short-circuit extraction — the extraction engine (Gemini/PaddleOCR)
+        // is far more tolerant of moderate blur and compression than the
+        // variance-based heuristic. Only genuinely unreadable files
+        // (blurScore < 0.03 or dimensions < 150 px) receive status 'fail',
+        // and even those are allowed through so the hasExtractedFields check
+        // below becomes the single source of truth for document failure.
         const quality = await checkDocumentQuality(
           preprocessing.pageImages[0],
           'image/jpeg'
         );
-
-        if (quality.status === 'fail') {
-          DocumentStore.update(doc._id, {
-            quality,
-            status: 'failed',
-            needsReview: true,
-          });
-
-          logExtractionMetrics({
-            docId: doc._id,
-            status: 'failed',
-            inputSizeBytes: file.size,
-            timings: {
-              totalMs: Date.now() - batchStart,
-            },
-            fallbackReason: 'quality_check_failed',
-          });
-
-          responseDocs.push(
-            safeDocument(DocumentStore.findById(doc._id))
-          );
-
-          continue;
-        }
 
         const normalizedFields = extraction.fields.map((field) => {
           const fieldKey = canonicalFieldKey(field.fieldKey);
@@ -520,7 +503,12 @@ router.post(
             totalMs,
           },
 
-          fallbackReason: extraction.fallbackReason,
+          // If quality was already degraded, surface that alongside any
+          // extraction-level fallback reason so log queries can correlate both.
+          fallbackReason:
+            quality.status === 'warn' || quality.status === 'fail'
+              ? `quality_${quality.status}${extraction.fallbackReason ? `;${extraction.fallbackReason}` : ''}`
+              : extraction.fallbackReason,
           fieldCount: normalizedFields.length,
         });
 

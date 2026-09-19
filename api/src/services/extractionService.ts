@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import fs from 'fs';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { z } from 'zod';
 import { IDocumentField } from '../models/store';
 import logger from './logger';
@@ -685,11 +685,26 @@ async function extractBatchWithGemini(
   }
 
   const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0,
     },
+    // Identity documents contain PII (names, numbers, dates) that Gemini's
+    // default safety filters can flag as sensitive content, causing a SAFETY
+    // error before any extraction occurs. We disable the two categories that
+    // fire on structured PII. HARM_CATEGORY_SEXUALLY_EXPLICIT and
+    // HARM_CATEGORY_HATE_SPEECH intentionally keep their default thresholds.
+    safetySettings: [
+      {
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+    ],
   });
 
   const prompt = `
@@ -871,7 +886,8 @@ async function extractWithPaddleOCR(
     } else if (
       normalizedText.includes('GOVERNMENT OF INDIA') ||
       /UNIQUE IDENTIFICATION AUTHORITY/.test(normalizedText) ||
-      /\d{4}\s\d{4}\s\d{4}/.test(normalizedText)
+      /\d{4}\s\d{4}\s\d{4}/.test(normalizedText) ||
+      (normalizedText.includes('DOB') && (normalizedText.includes('MALE') || normalizedText.includes('FEMALE')))
     ) {
       docType = 'aadhaar';
     } else if (
@@ -881,6 +897,13 @@ async function extractWithPaddleOCR(
       normalizedText.includes('NFSA')
     ) {
       docType = 'ration_card';
+    } else if (
+      normalizedText.includes('DRIVING LICENSE') ||
+      normalizedText.includes('DRIVING LICENCE') ||
+      normalizedText.includes('MOTOR VEHICLES ACT') ||
+      /\b[A-Z]{2}\d{2}\s*\d{6,}\b/.test(normalizedText)
+    ) {
+      docType = 'driving_licence';
     }
 
     const fields: IDocumentField[] = [];
@@ -900,6 +923,14 @@ async function extractWithPaddleOCR(
       if (idMatch) {
         idKey = 'pan_no';
         idLabel = 'PAN Number';
+      }
+    } else if (docType === 'driving_licence') {
+      // Standard Indian DL number: two-letter state code + 2-digit RTO + up to 11 digits
+      // e.g. MH12 20190045678 or KA05 20150012345
+      idMatch = normalizedText.match(/\b[A-Z]{2}\d{2}\s*\d+\b/);
+      if (idMatch) {
+        idKey = 'dl_no';
+        idLabel = 'License No';
       }
     }
 
@@ -953,8 +984,19 @@ async function extractWithPaddleOCR(
       const match = normalizedText.match(/INCOME TAX DEPARTMENT\s+(.*?)\s+(FATHER|DATE|\d{2}\/\d{2})/);
       if (match && match[1]) nameValue = match[1];
     } else if (docType === 'aadhaar') {
-      const match = normalizedText.match(/GOVERNMENT OF INDIA\s+(.*?)\s+(DOB|YEAR OF BIRTH|\d{2}\/\d{2})/);
-      if (match && match[1]) nameValue = match[1];
+      // Attempt 1: Explicit "NAME:" label (handles crops and newer card layouts)
+      let match = normalizedText.match(/NAME\s*[:\-]?\s*([A-Z][A-Z\s]{2,})(?=\s+(?:MALE|FEMALE|DOB|YEAR|\d{2}\/|\n))/);
+
+      // Attempt 2: Classic header boundary (full-card layouts)
+      if (!match) {
+        match = normalizedText.match(/GOVERNMENT OF INDIA\s+(.*?)\s+(DOB|YEAR OF BIRTH|\d{2}\/\d{2})/);
+      }
+
+      if (match && match[1]) nameValue = match[1].trim();
+    } else if (docType === 'driving_licence') {
+      // DL cards typically print the name after a NAME label and before DOB or the date fields
+      const match = normalizedText.match(/NAME\s*[:\-]?\s*([A-Z][A-Z\s]{2,})(?=\s+(?:DATE|DOB|S\/O|D\/O|W\/O|\d{2}[\-\/]))/);
+      if (match && match[1]) nameValue = match[1].trim();
     }
 
     if (nameValue) {

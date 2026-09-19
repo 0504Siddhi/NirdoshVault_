@@ -38,7 +38,21 @@ export async function checkDocumentQuality(filePath: string, contentType: string
     const height = metadata.height || 0;
     const resolution = `${width}x${height}`;
 
-    // Resolution check
+    // Hard-fail: genuinely unusable dimensions — extraction is not worth attempting.
+    // Keep warn threshold at 400px so low-res images are still flagged as warnings.
+    if (width < 150 || height < 150) {
+      return {
+        status: 'fail',
+        blurScore: 0,
+        brightness: 'acceptable',
+        resolution,
+        orientation: 'unknown',
+        fileSize,
+        contentType,
+        warnings: [`Image dimensions too small (${resolution}) — cannot extract text reliably`],
+      };
+    }
+
     if (width < 400 || height < 400) {
       warnings.push(`Low resolution (${resolution}) — extraction confidence may be reduced`);
     }
@@ -58,10 +72,21 @@ export async function checkDocumentQuality(filePath: string, contentType: string
       warnings.push('Image appears overexposed — details may be lost');
     }
 
-    // Blur estimation via Laplacian variance approximation using Sharp
-    // We compute a simple variance of the greyscale channel as a proxy
-    const greyscaleBuffer = await image.greyscale().raw().toBuffer();
-    const blurScore = estimateSharpness(greyscaleBuffer);
+    // Blur estimation via Laplacian variance approximation.
+    //
+    // The image arriving here has already been resized and JPEG-recompressed by
+    // preprocessingService, which softens edges and reduces pixel variance — the
+    // very quantity our sharpness proxy measures. To partially offset that
+    // softening we apply Sharp's built-in unsharp-mask (.sharpen()) to a
+    // SCORING-ONLY copy of the image. The actual image file is not modified; this
+    // pipeline only produces a greyscale buffer used for measurement.
+    const scoringBuffer = await sharp(filePath)
+      .sharpen()          // unsharp-mask — reverses some JPEG/resize softening
+      .greyscale()
+      .raw()
+      .toBuffer();
+
+    const blurScore = estimateSharpness(scoringBuffer);
 
     if (blurScore < 0.3) {
       warnings.push('Image appears blurry — text extraction accuracy may be reduced');
@@ -76,7 +101,20 @@ export async function checkDocumentQuality(filePath: string, contentType: string
       warnings.push('Image appears rotated — auto-correction will be attempted during extraction');
     }
 
-    const status: QualityResult['status'] = blurScore < 0.15 ? 'fail' : warnings.length > 2 ? 'warn' : 'pass';
+    // Status determination:
+    //   'fail' — blurScore so low the image is effectively a solid blob (no edges
+    //            whatsoever even after sharpening). Threshold: < 0.03, i.e. raw
+    //            variance < 60. A near-solid 50×50 image sits around 20–40;
+    //            any document with readable text, even heavily compressed, sits
+    //            well above 60 after the sharpen step.
+    //   'warn' — any quality issue present but extraction is still worth trying.
+    //   'pass' — no warnings.
+    const status: QualityResult['status'] =
+      blurScore < 0.03
+        ? 'fail'
+        : warnings.length > 0
+        ? 'warn'
+        : 'pass';
 
     return {
       status,
@@ -89,9 +127,10 @@ export async function checkDocumentQuality(filePath: string, contentType: string
       warnings,
     };
   } catch (err) {
+    // If Sharp cannot parse the file at all, it is genuinely unreadable.
     return {
-      status: 'warn',
-      blurScore: 0.5,
+      status: 'fail',
+      blurScore: 0,
       brightness: 'acceptable',
       resolution: 'unknown',
       orientation: 'unknown',
@@ -123,6 +162,8 @@ function estimateSharpness(buffer: Buffer): number {
   if (count === 0) return 0.5;
   const mean = sum / count;
   const variance = sumSq / count - mean * mean;
-  // Normalize: typical sharp document has variance ~1500–3000
+  // Normalize: typical sharp document has variance ~1500–3000.
+  // The scoring-only sharpen step upstream boosts soft documents enough that
+  // WhatsApp-compressed originals reliably clear the 0.03 hard-fail floor.
   return Math.min(1.0, variance / 2000);
 }
