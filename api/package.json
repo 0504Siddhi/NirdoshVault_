@@ -5,10 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-runtime-assets.js",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
-    "test": "node -r ts-node/register src/services/consensusService.test.ts && node -r ts-node/register src/services/extractionService.test.ts && node -r ts-node/register src/services/qualityService.test.ts"
+    "test": "node -r ts-node/register src/services/consensusService.test.ts && node -r ts-node/register src/services/extractionService.test.ts && node -r ts-node/register src/services/qualityService.test.ts && node -r ts-node/register src/services/extractionService.retry.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

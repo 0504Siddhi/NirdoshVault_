@@ -10,7 +10,114 @@ import { IDocumentField } from '../models/store';
 import logger from './logger';
 import { config } from '../config';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(config.gemini.apiKey || process.env.GEMINI_API_KEY || '');
+
+let mockGenerativeModel: any = null;
+
+export function setGenerativeModelForTesting(mock: any): void {
+  mockGenerativeModel = mock;
+}
+
+export function isTransientGeminiError(error: any): boolean {
+  if (!error) return false;
+
+  const status =
+    error?.status ??
+    error?.response?.status ??
+    error?.cause?.status ??
+    error?.response?.data?.error?.code ??
+    error?.code;
+
+  const numericStatus = typeof status === 'number' ? status : parseInt(String(status), 10);
+
+  // Non-transient errors must fail fast without retry (e.g. bad key, bad request)
+  if (numericStatus === 400 || numericStatus === 401 || numericStatus === 403 || numericStatus === 404) {
+    return false;
+  }
+
+  // Definite transient status codes
+  if (numericStatus === 503 || numericStatus === 429) {
+    return true;
+  }
+
+  const message = (error?.message || error?.statusText || String(error)).toLowerCase();
+
+  // Explicit non-transient auth/client issues in message
+  if (
+    message.includes('401') ||
+    message.includes('403') ||
+    message.includes('unauthorized') ||
+    message.includes('forbidden') ||
+    message.includes('api_key_invalid') ||
+    message.includes('invalid api key')
+  ) {
+    return false;
+  }
+
+  // Transient status messages
+  if (
+    message.includes('503') ||
+    message.includes('service unavailable') ||
+    message.includes('high demand') ||
+    message.includes('overloaded') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('429') ||
+    message.includes('resource_exhausted') ||
+    message.includes('rate limit') ||
+    message.includes('too many requests')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export interface RetryOptions {
+  maxRetries?: number;
+  delaysMs?: number[];
+}
+
+export const DEFAULT_RETRY_DELAYS = [1000, 3000];
+
+export async function executeGeminiWithRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const delays = options.delaysMs || DEFAULT_RETRY_DELAYS;
+  const maxRetries = options.maxRetries ?? delays.length;
+
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (attempt >= maxRetries || !isTransientGeminiError(error)) {
+        throw error;
+      }
+
+      const delayMs = delays[attempt] ?? delays[delays.length - 1];
+      attempt++;
+
+      const status =
+        error?.status ??
+        error?.response?.status ??
+        error?.cause?.status ??
+        null;
+
+      logger.warn(`[Gemini] Transient error (${status || 'transient'}). Retrying attempt ${attempt}/${maxRetries} in ${delayMs}ms...`, {
+        attempt,
+        maxRetries,
+        delayMs,
+        status,
+        error: error?.message || String(error),
+      });
+
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+}
 
 // ─── Tolerant schema + canonical field normalization ─────────────────────────
 
@@ -572,8 +679,8 @@ export async function extractBatchDocumentFields(
       logger.error('[Gemini] Batch extraction failed', {
         message,
         status,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        hasApiKey: Boolean(process.env.GEMINI_API_KEY),
+        model: config.gemini.model,
+        hasApiKey: Boolean(config.gemini.apiKey || process.env.GEMINI_API_KEY),
       });
     }
   }
@@ -676,16 +783,17 @@ async function mapWithConcurrency<T, R>(
 
 // ─── Gemini Batch API Implementation ──────────────────────────────────────────
 
-async function extractBatchWithGemini(
+export async function extractBatchWithGemini(
   fileBatch: FileBatchItem[],
-  timeoutMs = config.extraction.geminiTimeoutMs
+  timeoutMs = config.extraction.geminiTimeoutMs,
+  retryOptions?: RetryOptions
 ): Promise<BatchExtractedResult> {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!config.gemini.apiKey && !process.env.GEMINI_API_KEY && !mockGenerativeModel) {
     throw new Error('GEMINI_API_KEY is not set');
   }
 
-  const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+  const model = mockGenerativeModel || genAI.getGenerativeModel({
+    model: config.gemini.model,
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0,
@@ -769,48 +877,50 @@ Rules:
     }
   }
 
-  let timeoutHandle: NodeJS.Timeout | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutHandle = setTimeout(
-      () => reject(new Error(`GEMINI_TIMEOUT: Batch request timed out after ${timeoutMs}ms`)),
-      timeoutMs
-    );
+  const requestStartedAt = Date.now();
+
+  logger.info('[Gemini] Starting extraction', {
+    model: config.gemini.model,
+    documents: fileBatch.length,
+    pages: fileBatch.reduce((sum, item) => sum + item.pageImages.length, 0),
   });
 
-  try {
-    const requestStartedAt = Date.now();
-
-    logger.info('[Gemini] Starting extraction', {
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-      documents: fileBatch.length,
-      pages: fileBatch.reduce((sum, item) => sum + item.pageImages.length, 0),
+  const result = await executeGeminiWithRetry(async () => {
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(
+        () => reject(new Error(`GEMINI_TIMEOUT: Batch request timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      );
     });
-
-    const result = await Promise.race([
-      model.generateContent(contentParts),
-      timeoutPromise,
-    ]);
-
-    const responseText = result.response.text().trim();
-
-    logger.info('[Gemini] Extraction completed', {
-      elapsedMs: Date.now() - requestStartedAt,
-      responseLength: responseText.length,
-    });
-    if (!responseText) throw new Error('Gemini returned an empty response');
 
     try {
-      return JSON.parse(responseText);
-    } catch {
-      const jsonStart = responseText.indexOf('{');
-      const jsonEnd = responseText.lastIndexOf('}');
-      if (jsonStart === -1 || jsonEnd <= jsonStart) {
-        throw new Error(`Gemini returned non-JSON output: ${responseText.slice(0, 200)}`);
-      }
-      return JSON.parse(responseText.slice(jsonStart, jsonEnd + 1));
+      return await Promise.race([
+        model.generateContent(contentParts),
+        timeoutPromise,
+      ]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     }
-  } finally {
-    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }, retryOptions);
+
+  const responseText = result.response.text().trim();
+
+  logger.info('[Gemini] Extraction completed', {
+    elapsedMs: Date.now() - requestStartedAt,
+    responseLength: responseText.length,
+  });
+  if (!responseText) throw new Error('Gemini returned an empty response');
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    const jsonStart = responseText.indexOf('{');
+    const jsonEnd = responseText.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd <= jsonStart) {
+      throw new Error(`Gemini returned non-JSON output: ${responseText.slice(0, 200)}`);
+    }
+    return JSON.parse(responseText.slice(jsonStart, jsonEnd + 1));
   }
 }
 

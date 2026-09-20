@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: nirdosh-vault-api
     runtime: docker
@@ -10,7 +10,7 @@
       - key: NODE_ENV
         value: production
       - key: PADDLE_WARMUP_ON_START
-        value: "false"
+        value: "true"
       - key: PREPROCESS_MAX_EDGE
         value: "1500"
       - key: PREPROCESS_JPEG_QUALITY
