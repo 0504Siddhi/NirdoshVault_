@@ -10,6 +10,17 @@
         { "filename": "pan.jpg", "label": "PAN Card", "docType": "pan" },
         { "filename": "birth-certificate.jpg", "label": "Birth Certificate", "docType": "birth_certificate" }
       ]
+    },
+    {
+      "id": "set-2",
+      "name": "Demo Set: Name & DOB Mismatch",
+      "description": "3 synthetic documents (Ration Card, Aadhaar Card, Driving Licence) for Sanjay Prakash Patil demonstrating a DOB conflict and name initial format variation.",
+      "scenario": "Ration Card & Aadhaar agree on DOB 14/06/1995 while Driving Licence has 22/09/1994. Aadhaar and Driving Licence have full name Sanjay Prakash Patil while Ration Card has S. P. Patil.",
+      "documents": [
+        { "filename": "ration-card.jpg", "label": "Ration Card", "docType": "ration_card" },
+        { "filename": "aadhaar.jpg", "label": "National ID (Aadhaar)", "docType": "aadhaar" },
+        { "filename": "driving-licence.jpg", "label": "Driving Licence", "docType": "driving_licence" }
+      ]
     }
   ]
 }

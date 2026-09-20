@@ -70,7 +70,30 @@ export default function Upload() {
   const [analyzing, setAnalyzing] = useState(false);
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
   const navigate = useNavigate();
+
+  const handleLoadSample = async () => {
+    setLoadingSample(true);
+    try {
+      const res = await api.post('/samples/load', { setId: 'set-2' });
+      const analysisId = res.data?.analysis?._id;
+      if (analysisId) {
+        navigate(`/report/${analysisId}`);
+      } else {
+        throw new Error('Analysis ID missing from sample load response');
+      }
+    } catch (err: any) {
+      console.error('Failed to load sample set:', err);
+      const msg =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to load sample documents';
+      alert(msg);
+    } finally {
+      setLoadingSample(false);
+    }
+  };
   
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +219,37 @@ export default function Upload() {
         <div>
           For best results, upload the <strong className="text-navy-950">original photo</strong> rather than one shared via WhatsApp or another chat app — those apps compress images and can reduce extraction accuracy.
         </div>
+      </div>
+
+      {/* Pre-built Sample Document Demo Banner */}
+      <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-xl border border-saffron-500/20 bg-saffron-500/10 p-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3 text-xs text-slate-700">
+          <span className="text-xl shrink-0 text-saffron-500">⚡</span>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              Evaluating or running a live demo?
+            </div>
+            <p className="text-xs text-slate-500">
+              Loads a ready-made example instantly, no upload needed.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLoadSample}
+          disabled={loadingSample}
+          className="btn btn-secondary shrink-0 gap-2 border-saffron-500/30 px-3 py-2 text-xs font-semibold text-saffron-600 hover:bg-saffron-500/10"
+        >
+          {loadingSample ? (
+            <>
+              <Loader2 size={14} className="animate-spin text-saffron-500" />
+              <span>Loading Demo...</span>
+            </>
+          ) : (
+            <span>Try with Sample Documents →</span>
+          )}
+        </button>
       </div>
 
       {/* File errors */}

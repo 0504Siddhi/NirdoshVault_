@@ -1,0 +1,56 @@
+{
+  "docType": "aadhaar",
+  "fields": [
+    {
+      "fieldKey": "full_name",
+      "label": "Name",
+      "value": "Sanjay Prakash Patil",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.98,
+      "evidenceText": "Sanjay Prakash Patil"
+    },
+    {
+      "fieldKey": "gender",
+      "label": "Gender",
+      "value": "Male",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.99,
+      "evidenceText": "Male"
+    },
+    {
+      "fieldKey": "dob",
+      "label": "Date of Birth",
+      "value": "14/06/1995",
+      "normalized": "",
+      "type": "date",
+      "page": 1,
+      "confidence": 0.97,
+      "evidenceText": "DOB: 14/06/1995"
+    },
+    {
+      "fieldKey": "address",
+      "label": "Address",
+      "value": "Flat No. 12, Shree Residency, Karve Nagar, Pune, Maharashtra – 411052",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.95,
+      "evidenceText": "Flat No. 12, Shree Residency, Karve Nagar, Pune, Maharashtra – 411052"
+    },
+    {
+      "fieldKey": "aadhaar_no",
+      "label": "Aadhaar Number",
+      "value": "482173951642",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.99,
+      "evidenceText": "482173951642"
+    }
+  ],
+  "needsReview": false
+}

@@ -1,0 +1,46 @@
+{
+  "docType": "ration_card",
+  "fields": [
+    {
+      "fieldKey": "full_name",
+      "label": "Name",
+      "value": "S. P. Patil",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.95,
+      "evidenceText": "Name: S. P. Patil"
+    },
+    {
+      "fieldKey": "dob",
+      "label": "Date of Birth",
+      "value": "14-06-1995",
+      "normalized": "",
+      "type": "date",
+      "page": 1,
+      "confidence": 0.96,
+      "evidenceText": "DOB: 14-06-1995"
+    },
+    {
+      "fieldKey": "address",
+      "label": "Address",
+      "value": "Flat 12 Shree Residency, Karve Nagar, Pune – 411052",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.94,
+      "evidenceText": "Flat 12 Shree Residency, Karve Nagar, Pune – 411052"
+    },
+    {
+      "fieldKey": "ration_card_number",
+      "label": "Ration Card Number",
+      "value": "MH-12-45873921",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.98,
+      "evidenceText": "MH-12-45873921"
+    }
+  ],
+  "needsReview": false
+}

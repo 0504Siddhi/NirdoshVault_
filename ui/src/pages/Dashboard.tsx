@@ -6,6 +6,7 @@ import {
   CheckCircle,
   ChevronRight,
   FileText,
+  Loader2,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -24,6 +25,31 @@ export default function Dashboard() {
   // DigiLocker modal states
   const [showDigiLockerModal, setShowDigiLockerModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Sample document loading state
+  const [loadingSample, setLoadingSample] = useState(false);
+
+  const handleLoadSampleSet = async () => {
+    setLoadingSample(true);
+    try {
+      const res = await api.post('/samples/load', { setId: 'set-2' });
+      const analysisId = res.data?.analysis?._id;
+      if (analysisId) {
+        navigate(`/report/${analysisId}`);
+      } else {
+        throw new Error('Analysis ID missing from sample load response');
+      }
+    } catch (err: any) {
+      console.error('Failed to load sample set:', err);
+      const msg =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to load sample documents';
+      alert(msg);
+    } finally {
+      setLoadingSample(false);
+    }
+  };
 
   // DPDP consent modal states
   const [showConsentModal, setShowConsentModal] = useState(false);
@@ -191,23 +217,25 @@ export default function Dashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="card p-6">
-          <div className="mb-3 text-3xl">📁</div>
+      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="card flex flex-col justify-between p-6">
+          <div>
+            <div className="mb-3 text-3xl">📁</div>
 
-          <h3 className="mb-2 text-lg font-bold">
-            Upload Documents
-          </h3>
+            <h3 className="mb-2 text-lg font-bold">
+              Upload Documents
+            </h3>
 
-          <p className="mb-6 text-sm text-slate-500">
-            Upload Aadhaar, PAN, Voter ID, Driving Licence,
-            Passport, Birth Certificate, or Marksheet for
-            cross-document consistency checking.
-          </p>
+            <p className="mb-6 text-sm text-slate-500">
+              Upload Aadhaar, PAN, Voter ID, Driving Licence,
+              Passport, Birth Certificate, or Marksheet for
+              cross-document consistency checking.
+            </p>
+          </div>
 
           <Link
             to="/upload"
-            className="btn btn-primary px-4 py-2"
+            className="btn btn-primary flex w-full items-center justify-center px-4 py-2 text-sm"
           >
             Upload Now →
           </Link>
@@ -240,6 +268,47 @@ export default function Dashboard() {
             className="btn btn-secondary flex w-full items-center justify-center gap-2 px-4 py-2 text-sm"
           >
             Connect DigiLocker →
+          </button>
+        </div>
+
+        {/* Pre-built Sample Documents card */}
+        <div className="card flex flex-col justify-between border-slate-200 bg-white p-6">
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-3xl">⚡</div>
+
+              <span className="rounded-full border border-saffron-500/20 bg-saffron-500/10 px-2 py-0.5 text-[10px] font-bold text-saffron-600">
+                Instant Demo
+              </span>
+            </div>
+
+            <h3 className="mb-2 text-lg font-bold">
+              Try Sample Documents
+            </h3>
+
+            <p className="mb-3 text-sm text-slate-500">
+              Instantly analyze a pre-built 3-document mismatch scenario (Ration Card, Aadhaar, Driving Licence) with zero OCR wait.
+            </p>
+
+            <p className="mb-6 text-xs text-slate-400">
+              Loads a ready-made example instantly, no upload needed.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLoadSampleSet}
+            disabled={loadingSample}
+            className="btn btn-secondary flex w-full items-center justify-center gap-2 px-4 py-2 text-sm hover:border-saffron-500/50 hover:text-saffron-600"
+          >
+            {loadingSample ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-saffron-500" />
+                <span>Loading Demo Set...</span>
+              </>
+            ) : (
+              <span>Try with Sample Documents →</span>
+            )}
           </button>
         </div>
       </div>

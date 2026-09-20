@@ -1,0 +1,46 @@
+{
+  "docType": "driving_licence",
+  "fields": [
+    {
+      "fieldKey": "full_name",
+      "label": "Name",
+      "value": "Sanjay Prakash Patil",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.96,
+      "evidenceText": "Name: Sanjay Prakash Patil"
+    },
+    {
+      "fieldKey": "dob",
+      "label": "Date of Birth",
+      "value": "22-09-1994",
+      "normalized": "",
+      "type": "date",
+      "page": 1,
+      "confidence": 0.95,
+      "evidenceText": "DOB: 22-09-1994"
+    },
+    {
+      "fieldKey": "address",
+      "label": "Address",
+      "value": "Flat 12, Shree Residency, Karve Nagar, Pune – 411052",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.93,
+      "evidenceText": "Flat 12, Shree Residency, Karve Nagar, Pune – 411052"
+    },
+    {
+      "fieldKey": "license_number",
+      "label": "Driving Licence Number",
+      "value": "MH12 458739",
+      "normalized": "",
+      "type": "string",
+      "page": 1,
+      "confidence": 0.98,
+      "evidenceText": "MH12 458739"
+    }
+  ],
+  "needsReview": false
+}

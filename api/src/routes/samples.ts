@@ -6,7 +6,8 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { DocumentStore, AnalysisStore } from '../models/store';
 import { normalizeField } from '../services/normalizationService';
 import { runConsensusEngine } from '../services/consensusService';
-import { FIELD_WEIGHTS } from '../services/consensusService';
+import { calculateIdentityResolutionConfidence } from '../scoring/identityResolutionConfidenceService';
+import { buildIdentityTrustGraph } from '../services/identityTrustGraphService';
 import { generateGuidance } from '../services/guidanceService';
 import { generateChecklist } from '../services/checklistService';
 import { AuditService } from '../services/auditService';
@@ -113,25 +114,36 @@ router.post('/load', authenticate, async (req: AuthRequest, res: Response): Prom
     // 4. Run Consensus Engine
     const engineData = runConsensusEngine(createdDocs);
 
+    const identityResolutionConfidence =
+      calculateIdentityResolutionConfidence({
+        fieldResults: engineData.fieldResults,
+        allComparableFieldResults:
+          engineData.allComparableFieldResults ??
+          engineData.fieldResults,
+        documentTypes: createdDocs.map(
+          (document) => document.docType
+        ),
+        totalUploadedDocuments: createdDocs.length,
+      });
+
+    const identityTrustGraph =
+      buildIdentityTrustGraph({
+        documents: createdDocs,
+        fieldResults: engineData.fieldResults,
+        identityResolutionConfidence,
+      });
+
     // 5. Generate Guidance
     const guidance = await generateGuidance(engineData.fieldResults);
 
     // 6. Compute Summary
     const summary = engineData.summary;
 
-    // 7. Compute health score
-    let totalW = 0, earnedW = 0;
-    for (const r of engineData.fieldResults) {
-      const w = FIELD_WEIGHTS[r.fieldKey] ?? 5;
-      totalW += w;
-    }
-    const healthScore = totalW > 0 ? Math.round((earnedW / totalW) * 100) : 0;
-
-    // 8. Generate checklist
+    // 7. Generate checklist
     const uploadedDocTypes = createdDocs.map(d => d.docType);
     const checklist = generateChecklist(uploadedDocTypes, engineData.documentSpecificFields);
 
-    // 9. Store Analysis
+    // 8. Store Analysis
     const analysis = AnalysisStore.create({
       userId: req.user.id,
       documentIds: createdDocs.map(d => d._id),
@@ -141,6 +153,8 @@ router.post('/load', authenticate, async (req: AuthRequest, res: Response): Prom
       documentSpecificFields: engineData.documentSpecificFields,
       guidance,
       checklist,
+      identityResolutionConfidence,
+      identityTrustGraph: identityTrustGraph ?? undefined,
     });
 
     AuditService.log(req.user.id, 'sample.load_completed', {
