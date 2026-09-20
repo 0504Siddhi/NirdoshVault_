@@ -5,18 +5,20 @@
 
 > India already has digital document infrastructure — DigiLocker, UMANG, India Stack. The missing layer is *intelligence*. Nirdosh Vault doesn't replace them; it adds a pre-submission verification layer that detects, explains, and helps resolve cross-document inconsistencies before a citizen ever faces rejection.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://nirdosh-vault-ui-mauve.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://nirdosh-vault-seven.vercel.app/)
 ![Status](https://img.shields.io/badge/status-hackathon%20MVP-orange)
 ![Frontend](https://img.shields.io/badge/frontend-React%2019%20%7C%20TypeScript%20%7C%20Tailwind-blue)
 ![Backend](https://img.shields.io/badge/backend-Node.js%20%7C%20Express-green)
 ![AI](https://img.shields.io/badge/AI-Gemini%20multimodal-purple)
 ![License](https://img.shields.io/badge/license-unlicensed%20(student%20prototype)-lightgrey)
 
-**🔗 Live Prototype:** [nirdosh-vault-ui-mauve.vercel.app](https://nirdosh-vault-ui-mauve.vercel.app/)
+**🔗 Live Prototype:** [nirdosh-vault-seven.vercel.app](https://nirdosh-vault-seven.vercel.app/)
 
-**📦 Repository:** [github.com/purvasatav/nirdosh-vaultapp](https://github.com/purvasatav/nirdosh-vaultapp)
+**📦 Repository:** [https://github.com/0504Siddhi/NirdoshVault_](https://github.com/0504Siddhi/NirdoshVault_)
 
-**🎥 Video Link:** [https://youtu.be/t0pPclPs6KY](https://youtu.be/t0pPclPs6KY)
+**Submission for the Lenovo LEAP AI Hackathon 2026**
+**Theme:** Digital Inclusion & Public Access | **Aligned with the IndiaAI Mission**
+
 
 ---
 
@@ -27,6 +29,7 @@
 - [Core Innovation: The Consensus Identity Engine](#core-innovation-the-consensus-identity-engine)
 - [Identity Resolution Confidence (IRC)](#identity-resolution-confidence-irc)
 - [Correction Guidance Engine](#correction-guidance-engine)
+- [Digital Inclusion & Accessibility](#digital-inclusion--accessibility)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Results & Validation](#results--validation)
@@ -156,6 +159,14 @@ Rules are retrieved via **Qdrant (RAG)** for citations only — **never for the 
 
 ---
 
+## Digital Inclusion & Accessibility
+Designed explicitly for the Lenovo LEAP Hackathon's Digital Inclusion theme, the platform is built for older adults and citizens with disabilities:
+*   **Regional Language Support (i18n):** Native language switcher to navigate the interface in regional dialects.
+*   **Text-to-Speech (TTS):** Auditory guidance for users with visual impairments or literacy barriers.
+*   **Dynamic Font Scaling:** Adjustable UI text sizes for older adults.
+
+---
+
 ## System Architecture
 
 ```
@@ -182,7 +193,7 @@ Outlier Flagged     "Conflicting evidence —
                       manual verification required"
       │
       ▼
-Correction Guidance Engine (rule lookup + Qdrant citation retrieval)
+Correction Guidance Engine (rule lookup +  citation retrieval)
       │
       ▼
 Gemini Explanation Layer (plain-language output)
@@ -206,7 +217,7 @@ Correction Kit (evidence + hedged guidance + disclaimer)
 | Output Validation | Zod / Pydantic + JSON Schema |
 | Field Matching | Deterministic rule engine — not black-box ML |
 | Rule Storage | Structured, versioned rule database (separate from retrieval layer) |
-| Guidance Retrieval | Qdrant (RAG) — citations only |
+| Guidance Retrieval | Rule-based engine (Qdrant RAG integration in Roadmap) |
 | Database | MongoDB |
 | Nearby Assistance | Browser Geolocation API + Google Places API, Haversine distance sort, Google Maps deep link |
 | Authentication & Security | JWT, bcrypt, Helmet, CORS, environment-based secrets |
@@ -271,9 +282,11 @@ Six controlled test cases verified that the system forms consensus only when evi
 - Field normalization & deterministic comparison
 - Pairwise consensus & outlier detection (verified on real multi-document runs)
 - Qualitative, agreement-ratio-based confidence labels
-- Correction Kit interface with UIDAI-sourced correction procedures
-- Qdrant-backed RAG citation retrieval for Aadhaar correction guidance
+- Correction Kit interface with deterministic, rule-based guidance
 - Nearby assistance-centre discovery (Geolocation + Places API)
+- **Digital Inclusion Suite:** Regional language switcher (i18n), Text-to-Speech (TTS), and Font Scaling.
+- **"Try Sample Documents" Feature:** 1-click synthetic document testing for safe evaluation without uploading real PII.
+
 
 **🔧 Integration in Progress**
 - Broader document-type coverage for live Gemini multimodal extraction
@@ -285,10 +298,10 @@ Six controlled test cases verified that the system forms consensus only when evi
 - Live DigiLocker API integration
 - CSC-operator interface
 - Expanded document/rule coverage
-- Multilingual/phonetic matching (Double Metaphone, transliteration-aware) after validation against a labelled multilingual dataset
 - Full Bhashini multilingual support
 - Government API integration, institutional verification dashboard
 - Multi-state DPI ecosystem deployment
+- **Qdrant Vector DB Integration:** Transitioning the Correction Engine to a fully dynamic RAG architecture for live UIDAI/government rule citations.
 
 ---
 
@@ -296,7 +309,7 @@ Six controlled test cases verified that the system forms consensus only when evi
 
 The intended production design processes documents temporarily and deletes them after verification, with explicit granular consent, purpose limitation, and data minimization — designed in accordance with the core principles of the **Digital Personal Data Protection (DPDP) Act, 2023**. This is a student prototype and **has not undergone formal legal compliance certification**.
 
-> ⚠️ **Privacy Notice:** This is a demonstration prototype. Please use synthetic or redacted documents instead of real Aadhaar, PAN, or other sensitive personal documents.
+> ⚠️ **Privacy Notice:** This is a hackathon prototype. Please use the built-in "Try Sample Documents" feature or upload redacted documents instead of real sensitive personal documents.
 
 AI assists with document understanding and field extraction only. **The final Identity Resolution Confidence score is produced entirely by the deterministic scoring engine — never by an LLM.** The score measures cross-document consistency only; it does not establish document authenticity, legal correctness, ownership, or government approval of any kind.
 
@@ -308,13 +321,12 @@ AI assists with document understanding and field extraction only. **The final Id
 - Node.js (LTS recommended)
 - npm
 - MongoDB
-- Qdrant instance (for RAG citation retrieval)
 - Google Gemini API access
 - Google Places API key (for nearby-centre discovery)
 
 ```bash
-git clone https://github.com/purvasatav/nirdosh-vaultapp.git
-cd nirdosh-vaultapp
+git clone [https://github.com/0504Siddhi/NirdoshVault_.git](https://github.com/0504Siddhi/NirdoshVault_.git)
+cd NirdoshVault_
 npm install
 ```
 
@@ -360,15 +372,6 @@ See `How to Setup.md` and `SETUP_GUIDE.md` in the repo root for full local setup
 ## Team
 
 **Team Nexovate**
-
-| Role | Name | 
-|---|---|
-| Team Lead | Siddhi Jadhav | 
-| Member | Purva Satav | 
-| Member | Saumya Raut |
-
-
-
 ---
 
 *Nirdosh Vault is a hackathon MVP under active development. It does not determine document authenticity, legal correctness, or scheme eligibility — it verifies cross-document consistency and always defers final authority to the relevant government issuing body.*
