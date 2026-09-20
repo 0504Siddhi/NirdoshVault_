@@ -227,10 +227,10 @@ export default function Upload() {
           <span className="text-xl shrink-0 text-saffron-500">⚡</span>
           <div>
             <div className="text-sm font-semibold text-slate-900">
-              Evaluating or running a live demo?
+              Skip the upload
             </div>
             <p className="text-xs text-slate-500">
-              Loads a ready-made example instantly, no upload needed.
+              Load a ready-made example instantly — with a real mismatch built in, so you can see the full report right away.
             </p>
           </div>
         </div>
