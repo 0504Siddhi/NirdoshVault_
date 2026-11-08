@@ -16,10 +16,6 @@
 
 **📦 Repository:** [https://github.com/0504Siddhi/NirdoshVault_](https://github.com/0504Siddhi/NirdoshVault_)
 
-**Submission for the Lenovo LEAP AI Hackathon 2026**
-**Theme:** Digital Inclusion & Public Access | **Aligned with the IndiaAI Mission**
-
-
 ---
 
 ## Table of Contents
