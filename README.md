@@ -22,6 +22,7 @@
 
 - [The Problem](#the-problem)
 - [What Nirdosh Vault Does](#what-nirdosh-vault-does)
+- [Prototype Screenshots](#prototype-screenshots)
 - [Core Innovation: The Consensus Identity Engine](#core-innovation-the-consensus-identity-engine)
 - [Identity Resolution Confidence (IRC)](#identity-resolution-confidence-irc)
 - [Correction Guidance Engine](#correction-guidance-engine)
@@ -75,6 +76,23 @@ The legal correction always remains with the issuing authority (UIDAI, Income Ta
 | Suggests corrective action | ❌ | ❌ | ❌ | ✅ |
 
 Nirdosh Vault is purpose-built to be **complementary**: existing Digital Public Infrastructure remains the document and service layer; Nirdosh Vault is the pre-submission intelligence and consistency layer on top of it.
+
+---
+
+## Prototype Screenshots
+
+> [!NOTE]
+> **Prototype Demonstration Notice:** The captures below are genuine screenshots recorded directly from the live deployed web prototype ([nirdosh-vault-seven.vercel.app](https://nirdosh-vault-seven.vercel.app/)) demonstrating the built-in synthetic multi-document evaluation flow. Nirdosh Vault is an independent, non-governmental working prototype developed for pre-submission consistency auditing; it does not claim official government affiliation, legal document authentication, or production readiness. Live Gemini multimodal extraction is subject to external API availability.
+
+| Screen | Description |
+|---|---|
+| **Landing & Concept Overview**<br><br>![Landing Page](docs/screenshots/landing-page.png) | **Citizen-facing Landing Page:** Introduces the pre-submission consistency verification concept, key trust badges, and an interactive conflict preview toggle illustrating real-world mismatch consequences before applying. |
+| **Document Upload & Sample Selection**<br><br>![Sample Selection](docs/screenshots/sample-selection.png) | **Document Upload & Sample Testing Interface:** Allows citizens to upload identity files or launch immediate evaluation with pre-configured synthetic multi-document sets without handling sensitive personal PII. |
+| **Identity Resolution Confidence (IRC)**<br><br>![IRC Confidence Scoring](docs/screenshots/confidence-scoring.png) | **Formula-driven Confidence Score:** Decomposes overall trust into four inspectable pillars — Agreement Strength, Independent Corroboration, Profile Coverage, and Extraction Reliability — rather than generating an arbitrary AI percentage. |
+| **Cross-Document Mismatch Detection**<br><br>![Mismatch Detection](docs/screenshots/mismatch-detection.png) | **Pre-submission Conflict Isolation:** Identifies discrepancies across uploaded documents (e.g., date-of-birth or name variants), reporting the conflict with supporting evidence without guessing an arbitrary master record. |
+| **Consensus Identity Profile**<br><br>![Consensus Identity Profile](docs/screenshots/consensus-identity-profile.png) | **Field-by-Field Consensus Resolution:** Displays values agreed upon by a strict majority across independent documents, isolating outliers for citizen review before official submission. |
+| **Correction Guidance Kit**<br><br>![Correction Guidance](docs/screenshots/correction-guidance.png) | **Advisory Action & Authority Guidance:** Provides evidence-backed correction checklists, official issuing authority citations (UIDAI, ITD, CSC), and draft declarations clearly marked for citizen review. |
+| **Application Readiness (Scheme Discovery)**<br><br>![Application Readiness](docs/screenshots/application-readiness.png) | **Government Scheme Consistency Screening:** Assesses application readiness for welfare schemes (PM-KISAN, scholarships) against declared profile criteria, highlighting document conflict risks before submission. |
 
 ---
 
